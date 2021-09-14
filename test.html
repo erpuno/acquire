@@ -1,0 +1,63 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"
+        integrity="sha512-UqYzmySEh6DXh20njgxWoxDvuA4qqM8FmKWTkRvkYsg7LjzjscbMHj06zbt3oC6kP2Oa7Qow6v/lGLeMywbvQg=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js"
+        integrity="sha512-jQV+iAyosXdea9ps2ETpxCAfALlMGuj+7QO3BhpTHfQf8FnOEUCnpwmsymNDnwB+H9rMMtcSPib9hQZsPLCxTw=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <button type="button" id="scan">scan</button>
+    <canvas id="view"></canvas>
+    <script>
+        let ws = new WebSocket("ws://0.0.0.0:40220");
+        ws.binaryType = "arraybuffer";
+        ws.onmessage = function(e){
+            if (e.data instanceof ArrayBuffer) {
+                if (e.data.byteLength > 4) {
+                    console.log('buffer')
+                    var load = pdfjsLib.getDocument({data: e.data})
+
+                    load.promise.then(function(pdf){
+                        console.log("loaded")
+
+                        pdf.getPage(1).then(function(page){
+                            var scale = 1
+                            var viewport = page.getViewport({scale: scale})
+                            var canvas = document.getElementById("view")
+                            var ctx = canvas.getContext("2d")
+                            canvas.height = viewport.height
+                            canvas.width = viewport.width
+                            var renderContext = { canvasContext: ctx, viewport: viewport }
+
+                            var renderTask = page.render(renderContext)
+                            renderTask.promise.then(function () {
+                                console.log('rendered')
+                            })
+                        })
+                    }, function(e){ console.log(e);})
+                }
+            } else if (e.data instanceof Blob){
+                console.log('blob')
+            }
+        }
+        ws.onopen = function(){
+            ws.send("init")
+        }
+        let b = document.getElementById("scan")
+        b.addEventListener("click", function(e){
+            ws.send("scan,,,")
+        })
+    </script>
+    <style type="text/css">
+        body{ display: flex; flex-direction: column;}
+        #view { flex: 1 1 auto; border: 1px solid lightgray; margin: 0 auto; }
+        #check{ flex: none; width: 5em; height: 2em; }
+    </style>
+</body>
+</html>
