@@ -9,9 +9,11 @@
     <Company>INFOTECH SE</Company>
     <RepositoryUrl>https://github.com/erpuno/acquire</RepositoryUrl>
     <IncludeSource>true</IncludeSource>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="LICENSE" Pack="true" Visible="false" PackagePath=""/>
   </ItemGroup>
 
   <ItemGroup>
