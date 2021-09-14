@@ -20,7 +20,6 @@ module Scan =
     [<Interface>]
     type ITwain =
       inherit IDisposable
-      abstract Start: unit -> int
       abstract OpenManager: unit -> int
       abstract EnableDS: unit -> int
       abstract GetDataSources: unit -> string list
@@ -32,9 +31,10 @@ module Scan =
       abstract AutoScan: unit -> bool
       abstract EnableDuplex: unit -> bool
       abstract ProgressDriverUi: bool -> bool
-      abstract Init: int -> bool
       abstract SetCaps: unit -> bool
       abstract FileInfo: unit -> string
+      abstract Start: int -> int
+      abstract Rollback: int -> int
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get    
