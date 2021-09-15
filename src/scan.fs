@@ -20,6 +20,7 @@ module Scan =
     [<Interface>]
     type ITwain =
       inherit IDisposable
+      abstract Init: unit -> unit
       abstract OpenManager: unit -> int
       abstract EnableDS: unit -> int
       abstract GetDataSources: unit -> string list

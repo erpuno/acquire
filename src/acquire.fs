@@ -10,7 +10,9 @@ module Acquire =
         let mutable tw: ITwain = tw
         let mutable reader: BinaryReader option = None
 
-        let manager(): Result<int,string> =
+        let init (): Result<int,string> = try tw.Init(); Ok 0 with e -> Error e.Message
+
+        let manager(_:int): Result<int,string> =
             try
                 match tw.OpenManager() with
                 | 0 -> Ok 0
@@ -132,7 +134,8 @@ module Acquire =
             match msg with
             | Scan(device,profile,caps) ->
                 let res =
-                    manager()
+                    init()
+                    |> Result.bind manager
                     |> Result.bind ds  // use profile here
                     |> Result.bind id  // use device from command, not the default one
                     |> Result.bind scanner
