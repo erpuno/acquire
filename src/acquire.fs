@@ -31,7 +31,7 @@ module Acquire =
         let id(_: string list): Result<string,string> =
             try
               match tw.DefaultIdentity() with
-              | "" -> Error "Пристрій за замовченням відсутній."
+              | "" -> Error "Пристрій за замовчуванням відсутній."
               | id -> Ok id
             with
               | e -> Error e.Message
