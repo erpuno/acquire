@@ -91,20 +91,29 @@ module Acquire =
                 | s when s <= 3 -> scanloop b
                 | 4 -> //after scan we've set on start
                     let name = tw.FileInfo()
-                    let stream = File.Open(name, FileMode.Open, FileAccess.Read)
-                    reader <- Some(new BinaryReader(stream, Encoding.UTF8, true))
+                    let mutable size = 0 
+                    try
+                      let stream = File.Open(name, FileMode.Open, FileAccess.Read)
+                      reader <- Some(new BinaryReader(stream, Encoding.UTF8, true))
+                      size <- (int)stream.Length
+                    with
+                    | _ -> () |> ignore // :? FileNotFoundException | :? UnauthorizedAccessException | :? IOException
 
                     match reader with
                     | None -> 
                         ch.Reply (Out(Encoding.UTF8.GetBytes("can't read scanned file")))
                     | Some r ->
-                        let size = (int)stream.Length
                         let mutable buf: byte array = Array.zeroCreate size
                         let size = r.Read(buf,0,buf.Length)
                         ch.Reply (Out(buf))
 
+                    reader |> Option.map(fun r -> 
+                                  r.BaseStream.Close()
+                                  r.Dispose() ) |> ignore
                     // rolback to state 2 (reset ui and allow to scan again) 
                     // todo: add posibility to scan from state 4
+                    reader <- None
+
                     tw.Rollback(2)
                 | r ->
                 tw.NativeCallback(false)
