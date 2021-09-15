@@ -13,8 +13,8 @@ module Acquire =
         let manager(): Result<int,string> =
             try
                 match tw.OpenManager() with
-                | 1 -> Error "Неможливо відкрити джерело даних."
-                | c -> Ok c
+                | 0 -> Ok 0
+                | TwCC s -> Error s
             with
                 | e -> Error e.Message
 

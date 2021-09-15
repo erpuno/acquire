@@ -38,3 +38,6 @@ module Scan =
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get    
+
+    type TwCC = (*condition code*)
+      | UnsupportedCap = 0x1000d
