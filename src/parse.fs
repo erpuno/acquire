@@ -5,7 +5,7 @@ open Scan
 // pure man's non 10K lines csv -> proto parser
 [<AutoOpen>]
 module Parser =
-    let (|Proto|_|) (t:string) = 
+    let (|Proto|_|) (t:string) =
         let pts = t.Split([|','|])
         if pts.Length < 4 then None
         else 

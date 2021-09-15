@@ -18,7 +18,7 @@ module Acquire =
             with
                 | e -> Error e.Message
 
-        let ds(_:int): Result<string list,string> = 
+        let ds(_:int): Result<string list,string> =
             try 
               match tw.GetDataSources() with
                 | [] -> Error "На цій ситемі відсутні TWAIN драйвери."
@@ -26,15 +26,15 @@ module Acquire =
             with 
               | e -> Error e.Message
 
-        let id(_: string list): Result<string,string> = 
-            try 
+        let id(_: string list): Result<string,string> =
+            try
               match tw.DefaultIdentity() with
               | "" -> Error "Пристрій за замовченням відсутній."
               | id -> Ok id
-            with 
+            with
               | e -> Error e.Message
 
-        let scanner(s: string): Result<string,string> = 
+        let scanner(s: string): Result<string,string> =
             try
               match tw.OpenScanner(s) with
               | "" -> Error "Неможливо відкрити сканер."
@@ -74,14 +74,14 @@ module Acquire =
             with
               | e -> Error e.Message
 
-        let enableDs(_): Result<int,string> = 
+        let enableDs(_): Result<int,string> =
             try
               match tw.EnableDS() with
               | 0 -> Ok 0
               | _ -> Error "Неможливо почати сканування (enable DS without ui)."
             with
               | e -> Error e.Message
-        
+
         let rec loop () = async {
             let! (msg, ch) = inbox.Receive()
 
@@ -91,7 +91,7 @@ module Acquire =
                 | s when s <= 3 -> scanloop b
                 | 4 -> //after scan we've set on start
                     let name = tw.FileInfo()
-                    let mutable size = 0 
+                    let mutable size = 0
                     try
                       let stream = File.Open(name, FileMode.Open, FileAccess.Read)
                       reader <- Some(new BinaryReader(stream, Encoding.UTF8, true))
@@ -126,12 +126,12 @@ module Acquire =
                         tw.ScanCallback <- new Callback(scanloop)
                         Ok 0
                     | _ -> Error "Помилка налашування фінального стану так колбеку сканування."
-                with 
+                with
                 | e -> Error e.Message
 
             match msg with
             | Scan(device,profile,caps) ->
-                let res = 
+                let res =
                     manager()
                     |> Result.bind ds  // use profile here
                     |> Result.bind id  // use device from command, not the default one
@@ -155,7 +155,7 @@ module Acquire =
         loop ()
     )
 
-    let proto(twain: ITwain): Msg -> Msg = 
+    let proto(twain: ITwain): Msg -> Msg =
         let ctl = control(twain)
         fun msg ->
             match msg with

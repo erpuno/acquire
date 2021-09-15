@@ -6,7 +6,7 @@ module Scan =
     type Setup  = Setup of string
     type Cap    = Cap of string
 
-    type Proto = 
+    type Proto =
       | Scan    of Device * Setup * Cap seq
       | Get     of Device * Setup * Cap seq
       | Set     of Device * Setup * Cap seq
@@ -37,7 +37,7 @@ module Scan =
       abstract Rollback: int -> unit
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
-      abstract member State: int with get    
+      abstract member State: int with get
 
     type TwCC = (*condition code*)
       | UnsupportedCap = 0x1000d
