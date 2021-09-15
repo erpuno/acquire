@@ -34,7 +34,7 @@ module Scan =
       abstract SetCaps: unit -> bool
       abstract FileInfo: unit -> string
       abstract Start: int -> int
-      abstract Rollback: int -> int
+      abstract Rollback: int -> unit
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get    

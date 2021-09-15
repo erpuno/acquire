@@ -113,11 +113,11 @@ module Acquire =
                     // rolback to state 2 (reset ui and allow to scan again) 
                     // todo: add posibility to scan from state 4
                     reader <- None
-
                     tw.Rollback(2)
+                    0
                 | r ->
-                tw.NativeCallback(false)
-                scanloop b
+                  tw.NativeCallback(false)
+                  scanloop b
 
             let start(_): Result<int,string> =
                 try
