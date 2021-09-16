@@ -140,7 +140,54 @@ module Acquire =
                 | Ok sts  -> sts |> ignore
                 | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
 
-            | _ -> ch.Reply (Out(Encoding.UTF8.GetBytes("not implemented")))
+            | Get(device,profile,caps) ->
+              let res = Error "not implemeneed"
+
+              match res with
+              | Ok sts -> ch.Reply (Out(Encoding.UTF8.GetBytes($"{sts}")))
+              | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
+            
+            | Set (device,profile,caps) ->
+              let testcap = "CAP_AUTOFEED,TWON_ONEVALUE,0,0"
+
+              let (|Test|_|) (s:string) =
+                if String.Compare(s, testcap, StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
+
+              let current(_): Result<string,string> =
+                try Ok (tw.ControlCapGetCurrent(testcap)) // read from caps
+                with e ->
+                  let code = try e.Message |> int |> Some with _ -> None
+                  match code with 
+                  | Some(TwCC s) -> Error s
+                  | _            -> Error e.Message
+
+              let set(cap: string): Result<string,string> =
+                try
+                  match cap with 
+                  | Test _ -> Ok "already set"
+                  | _     -> Ok (tw.ControlCapSet(cap))
+                with e -> 
+                  let code = try e.Message |> int |> Some with _ -> None
+                  match code with 
+                  | Some(TwCC s) -> Error s
+                  | _            -> Error e.Message
+
+              let res = 
+                init()
+                  |> Result.bind manager
+                  |> Result.bind ds  // use profile here
+                  |> Result.bind id  // use device from command, not the default one
+                  |> Result.bind scanner
+                  |> Result.bind current
+                  |> Result.bind set
+
+              match res with
+              | Ok sts -> ch.Reply(Out(Encoding.UTF8.GetBytes($"{sts}")))
+              | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
+
+            | r ->
+              printfn "doesn't match %A" r
+              ch.Reply (Out(Encoding.UTF8.GetBytes("not implemented")))
 
             return! loop ()
         }

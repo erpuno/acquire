@@ -36,9 +36,14 @@ module Scan =
       abstract FileInfo: unit -> string
       abstract Start: int -> int
       abstract Rollback: int -> unit
+      abstract ControlCapGetCurrent: string -> string
+      abstract ControlCapGet: string -> string
+      abstract ControlCapSet: string -> string
+      abstract ControlCapReset: unit -> string
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get
 
     type TwCC = (*condition code*)
+      | Baddest = 0x1000c
       | UnsupportedCap = 0x1000d
