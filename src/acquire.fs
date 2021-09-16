@@ -14,7 +14,7 @@ module Acquire =
 
         let manager(_:int): Result<int,string> =
             try
-                match tw.OpenManager() with
+                match tw.OpenDSM() with
                 | 0 -> Ok 0
                 | TwCC s -> Error s
             with
@@ -112,11 +112,9 @@ module Acquire =
                     reader |> Option.map(fun r -> 
                                   r.BaseStream.Close()
                                   r.Dispose() ) |> ignore
-                    // rolback to state 2 (reset ui and allow to scan again) 
-                    // todo: add posibility to scan from state 4
                     reader <- None
-                    tw.Rollback(2)
-                    0
+                    tw.Rollback(2) // todo: add posibility to scan from state 4
+                    tw.CloseDSM()  // close source manager for compatibility with ui forms
                 | r ->
                   tw.NativeCallback(false)
                   scanloop b
@@ -145,7 +143,7 @@ module Acquire =
                     |> Result.bind setcups // form program from caps
                     |> Result.bind enableDs
                     |> Result.bind start
-                    |> Result.mapError (fun e -> tw.Exit <- true;e)
+                    |> Result.mapError (fun e -> tw.Exit <- true; tw.CloseDSM() |> ignore; e)
 
                 match res with
                 | Ok sts  -> sts |> ignore

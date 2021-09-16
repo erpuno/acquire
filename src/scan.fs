@@ -21,7 +21,8 @@ module Scan =
     type ITwain =
       inherit IDisposable
       abstract Init: unit -> unit
-      abstract OpenManager: unit -> int
+      abstract OpenDSM: unit -> int
+      abstract CloseDSM: unit -> int
       abstract EnableDS: unit -> int
       abstract GetDataSources: unit -> string list
       abstract DefaultIdentity: unit -> string
