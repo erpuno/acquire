@@ -33,7 +33,6 @@ module Scan =
       abstract AutoScan: unit -> bool
       abstract EnableDuplex: unit -> bool
       abstract ProgressDriverUi: bool -> bool
-      abstract SetCaps: unit -> bool
       abstract FileInfo: unit -> string
       abstract Start: int -> int
       abstract Rollback: int -> unit

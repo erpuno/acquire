@@ -68,14 +68,6 @@ module Acquire =
             with
               | e -> Error e.Message
 
-        let setcups(_): Result<int, string> = 
-            try
-              match tw.SetCaps() with
-              | false -> Ok 0
-              | true -> Error "Помилка налаштування (capabilities)."
-            with
-              | e -> Error e.Message
-
         let enableDs(_): Result<int,string> =
             try
               match tw.EnableDS() with
@@ -140,7 +132,6 @@ module Acquire =
                     |> Result.bind nativeTransfer
                     |> Result.bind autoFeed
                     |> Result.bind disableProgressUi
-                    |> Result.bind setcups // form program from caps
                     |> Result.bind enableDs
                     |> Result.bind start
                     |> Result.mapError (fun e -> tw.Exit <- true; tw.CloseDSM() |> ignore; e)
