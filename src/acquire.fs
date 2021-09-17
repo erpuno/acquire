@@ -1,11 +1,28 @@
 namespace N2O
 open System
+open System.Globalization
 open System.IO
 open System.Threading
 open System.Text
 open Scan
+open Result
 
 module Acquire =
+    let rec traverseR f list = 
+        let (<*>) fr xr = 
+          match fr,xr with
+          | Ok f, Ok x       -> Ok (f x)
+          | Error e, Ok x    -> Error e
+          | Ok f, Error e    -> Error e
+          | Error f, Error x -> Error (f+x)
+
+        let ok = Result.Ok
+        let cons hd tl = hd :: tl
+
+        match list with 
+        | []     -> ok []
+        | hd::tl -> ok cons <*> (f hd) <*> (traverseR f tl)
+
     let control(tw) = MailboxProcessor.Start(fun(inbox:MailboxProcessor<Cmd>)  ->
         let mutable tw: ITwain = tw
         let mutable reader: BinaryReader option = None
@@ -75,6 +92,38 @@ module Acquire =
               | _ -> Error "Неможливо почати сканування (enable DS without ui)."
             with
               | e -> Error e.Message
+        
+        let currentCap(cap:string): Result<string,string> =
+            try Ok (tw.ControlCapGetCurrent(cap))
+            with e ->
+              let code = try e.Message |> int |> Some with _ -> None
+              match code with 
+              | Some(TwCC s) -> Error s
+              | _            -> Error e.Message
+
+        let set(cap:Cap): Result<string,string> =
+            let cp,co,ty,vs = cap
+            
+            let testcap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
+
+            printfn "test CAP: %s" testcap
+
+            let (|Test|_|) (s:string) =
+              if String.Compare(s, testcap, StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
+
+            let set_(cap: string): Result<string,string> =
+              try
+                match cap with 
+                | Test _ -> Ok "already set"
+                | _      -> Ok (tw.ControlCapSet(cap))
+              with e -> 
+                let code = try e.Message |> int |> Some with _ -> None
+                match code with 
+                | Some(TwCC s) -> Error s
+                | _            -> Error e.Message
+
+            currentCap(testcap)
+              |> Result.bind set_
 
         let rec loop () = async {
             let! (msg, ch) = inbox.Receive()
@@ -141,6 +190,7 @@ module Acquire =
                 | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
 
             | Get(device,profile,caps) ->
+              // get settings 
               let res = Error "not implemeneed"
 
               match res with
@@ -148,39 +198,15 @@ module Acquire =
               | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
             
             | Set (device,profile,caps) ->
-              let testcap = "CAP_AUTOFEED,TWON_ONEVALUE,0,0"
-
-              let (|Test|_|) (s:string) =
-                if String.Compare(s, testcap, StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
-
-              let current(_): Result<string,string> =
-                try Ok (tw.ControlCapGetCurrent(testcap)) // read from caps
-                with e ->
-                  let code = try e.Message |> int |> Some with _ -> None
-                  match code with 
-                  | Some(TwCC s) -> Error s
-                  | _            -> Error e.Message
-
-              let set(cap: string): Result<string,string> =
-                try
-                  match cap with 
-                  | Test _ -> Ok "already set"
-                  | _     -> Ok (tw.ControlCapSet(cap))
-                with e -> 
-                  let code = try e.Message |> int |> Some with _ -> None
-                  match code with 
-                  | Some(TwCC s) -> Error s
-                  | _            -> Error e.Message
-
               let res = 
                 init()
                   |> Result.bind manager
                   |> Result.bind ds  // use profile here
                   |> Result.bind id  // use device from command, not the default one
                   |> Result.bind scanner
-                  |> Result.bind current
-                  |> Result.bind set
+                  |> Result.bind (fun (_:string) -> traverseR set (Seq.toList caps))
 
+              // form profile message
               match res with
               | Ok sts -> ch.Reply(Out(Encoding.UTF8.GetBytes($"{sts}")))
               | Error e -> ch.Reply (Out(Encoding.UTF8.GetBytes(e)))
