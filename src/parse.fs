@@ -10,12 +10,16 @@ module Parser =
         if pts.Length < 4 then None
         else 
             try
-              let device = Device pts.[1]
-              let profile = Setup pts.[2]
-              let caps = pts.[3].Split([|'+'|]) |> Seq.map Cap
-
               let (|Eq|_|) arg (s:string) =
                 if String.Compare(s, arg, StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
+
+              let device = Device pts.[1]
+              let profile = Setup pts.[2]
+              let caps = pts.[3].Split([|'+'|]) |> Seq.map (fun s ->
+                match s with
+                | Eq "autofeed" _ -> (TwCap.AutoFeed,TwON.Value,TwType.bool,"true")
+                |               _ -> (TwCap.Profile, TwON.Value,TwType.str32,"")
+              )
 
               match pts.[0] with
                 | Eq "scan"    _ -> Some (Scan(device, profile, caps))
