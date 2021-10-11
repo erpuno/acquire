@@ -17,8 +17,13 @@ module Parser =
               let profile = Setup pts.[2]
               let caps = pts.[3].Split([|'+'|]) |> Seq.map (fun s ->
                 match s with
-                | Eq "autofeed" _ -> (TwCap.AutoFeed,TwON.Value,TwType.bool,"true")
-                |               _ -> (TwCap.Profile, TwON.Value,TwType.str32,"")
+                | Eq "autofeed"   _ -> (TwCap.AutoFeed,TwON.Value,TwType.bool,"true")
+                | Eq "autoscan"   _ -> (TwCap.AutoScan,TwON.Value,TwType.bool,"true")
+                | Eq "duplex"     _ -> (TwCap.Duplex,TwON.Value,TwType.bool,"true")
+                | Eq "indicators" _ -> (TwCap.Indicators,TwON.Value,TwType.bool,"true")
+                | Eq "native"     _ -> (TwCap.XrefMech,TwON.Value,TwType.uint16,"TWSX_NATIVE") // use types
+                | Eq "color-bw"   _ -> (TwCap.PixelType,TwON.Value,TwType.uint16,"TWPT_BW")    // enum support
+                |                 _ -> (TwCap.Profile, TwON.Value,TwType.str32,"")
               )
 
               match pts.[0] with

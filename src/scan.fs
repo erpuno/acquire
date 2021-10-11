@@ -3,8 +3,13 @@ open System
 
 module Scan =
     type TwCap =
-      | Profile  = 0
-      | AutoFeed = 0x1007
+      | Profile     = 0
+      | AutoFeed    = 0x1007
+      | AutoScan    = 0x1010
+      | Duplex      = 0x1013
+      | Indicators  = 0x100b
+      | XrefMech    = 0x0103
+      | PixelType   = 0x0101 // can be set on onevalue or enumeration. any xrefmech other that native and can't support every value, must support negotiation on this cap
 
     type TwON =
       | Array = 3
@@ -27,6 +32,9 @@ module Scan =
       | str128 = 0x000b
       | str255 = 0x000c
       | handle = 0x000f
+
+    type TwData =
+      | ImgNativeXfer = 0x0104
 
     type Device = Device of string
     type Setup  = Setup of string
@@ -66,6 +74,8 @@ module Scan =
       abstract ControlCapGet: string -> string
       abstract ControlCapSet: string -> string
       abstract ControlCapReset: unit -> string
+      abstract ImageCapGetCurrent: string -> string
+      abstract ImageCapSet: string -> string
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get
@@ -76,7 +86,12 @@ module Scan =
 
     module TwCap = 
       let MkString = function
-        | TwCap.AutoFeed -> "CAP_AUTOFEED"
+        | TwCap.AutoFeed    -> "CAP_AUTOFEED"
+        | TwCap.AutoScan    -> "CAP_AUTOSCAN"
+        | TwCap.Duplex      -> "CAP_DUPLEXENABLED"
+        | TwCap.Indicators  -> "CAP_INDICATORS"
+        | TwCap.XrefMech    -> "ICAP_XFERMECH"
+        | TwCap.PixelType   -> "ICAP_PIXELTYPE"
         | _ -> ""
 
     module TwType = 
@@ -95,6 +110,11 @@ module Scan =
         | TwType.str128 -> "TWTY_STR128"
         | TwType.str255 -> "TWTY_STR255"
         | TwType.handle -> "TWTY_HANDLE"
+        | _ -> ""
+
+    module TwData =
+      let MkString = function
+        | TwData.ImgNativeXfer -> "TWSX_NATIVE"
         | _ -> ""
 
     module TwON = 
