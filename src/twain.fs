@@ -1,75 +1,95 @@
 namespace N2O
+open System
 open Scan
 open Err
 
 [<AutoOpen>]
 module Twain =
-    // Result.traverseR
     module Result =
-        let lift (f: unit -> int): Result<int,string> = 
-            try
-                match f () with
-                | 0 -> Ok 0
-                | TwCC s -> Error s
-            with
-                | e -> Error e.Message
-        
-        let lift_ (f: _ -> 'b) (error: 'b -> string option) : Result<'b,string> =
-            let (|Err|_|) b = error b
-            try 
-                match f() with
-                | Err s -> Error s
-                | e -> Ok e
-            with
-                | e -> Error e.Message
-        
-        let liftS (f: string -> string) a: Result<string,string> =
-            try
-              match f(a) with
-              | "" -> Error "Неможливо відкрити сканер."
-              | r1 -> Ok r1
-            with
-              | e -> Error e.Message
+        let lift (f:'a -> 'b) (a:'a) (err:'b -> string option): Result<'b,string> = 
+            let (|Err|_|) b = err b            
+            let (<!>) = Result.bind
+            let f' a = try match f a with
+                            | Err s -> Error s
+                            | v -> Ok v
+                        with 
+                            | e -> Error e.Message
+            f' <!> Ok a
 
     type ITwain with
-        member self.init():             Result<int,string> = try self.Init(); Ok 0 with e -> Error e.Message
+        member self.init():             Result<int,string> =
+            Result.lift self.Init () (function |_ -> None) |> Result.map (fun _ -> 0)            
 
-        member self.manager(_:int):     Result<int,string> = Result.lift self.OpenDSM        
+        member self.manager(_:int):     Result<int,string> = 
+            Result.lift self.OpenDSM () (function | TwCC s -> Some s) |> Result.map (fun _ -> 0)
 
         member self.ds(_:int):          Result<string list,string> = 
-            Result.lift_ self.GetDataSources (function | [] -> Some "На цій ситемі відсутні TWAIN драйвери.";| _ -> None)
+            Result.lift self.GetDataSources () (function | [] -> Some "На цій ситемі відсутні TWAIN драйвери.";| _ -> None)
 
         member self.id(_:string list):  Result<string,string> = 
-            Result.lift_ self.DefaultIdentity (function | "" -> Some "Пристрій за замовчуванням відсутній.";| _ -> None)
+            Result.lift self.DefaultIdentity () (function | "" -> Some "Пристрій за замовчуванням відсутній.";| _ -> None)
 
-        member self.scanner(s: string): Result<string,string> = 
-            Result.liftS self.OpenScanner s
+        member self.scanner(s: string): Result<string,string> =
+            Result.lift self.OpenScanner s (function | "" -> Some "Неможливо відкрити сканер.";|_-> None)
 
         member self.nativeTransfer(_:_): Result<int,string> =
-            Result.lift_ self.NativeTransfer (function | true -> Some "Помилка налаштування (native transfer).";|_-> None) |> Result.map (fun _ -> 0)
+            Result.lift self.NativeTransfer () (function | true -> Some "Помилка налаштування (native transfer).";|_-> None) |> Result.map (fun _ -> 0)
 
         member self.autoFeed(_): Result<int,string> =
-            Result.lift_ self.AutoFeed (function | true -> Some "Помилка налаштування (auto feed).";|_ -> None) |> Result.map (fun _ -> 0)
+            Result.lift self.AutoFeed () (function | true -> Some "Помилка налаштування (auto feed).";|_ -> None) |> Result.map (fun _ -> 0)
             
-        member self.disableProgressUi(_): Result<int, string> =
-            try
-              match self.ProgressDriverUi(false) with
-              | false -> Ok 0
-              | true -> Error "Помилка налаштування (progress ui)."
-            with
-              | e -> Error e.Message
+        member self.disableProgressUi(prev): Result<int, string> =
+            Result.lift self.ProgressDriverUi false (function | true -> Some "Помилка налаштування (progress ui)";|_-> None) |> Result.map(fun _ -> 0)
 
         member self.enableDs(_): Result<int,string> =
             // lift for twcc codes, but we don't know codes yet
-            Result.lift_ self.EnableDS (function | 0 -> None;|_-> Some "Неможливо почати сканування (enable DS without ui).")
+            Result.lift self.EnableDS () (function | 0 -> None;|_-> Some "Неможливо почати сканування (enable DS without ui).")
 
         member self.start(scanloop): Result<int,string> =
-            try
-                match self.Start(4) with
-                | 0 ->
-                    self.ScanCallback <- new Callback(scanloop)
-                    Ok 0
-                | _ -> Error "Помилка налашування фінального стану так колбеку сканування."
-            with
-            | e -> Error e.Message
+            Result.lift self.Start 4 (function | 0 -> None;|_->Some "Помилка налашування фінального стану так колбеку сканування.") 
+                |> Result.map (fun x -> self.ScanCallback <- new Callback(scanloop); x)
+
+        member self.currentCap(cap:string)(current:string -> string): Result<string,string> =
+            try Ok (current(cap))
+            with e ->
+              let code = try e.Message |> int |> Some with _ -> None
+              match code with 
+              | Some(TwCC s) -> Error s
+              | _            -> Error e.Message
+
+        member self.get(cap:Cap): Result<string,string> =
+            let cp,co,ty,vs = cap
+            let testcap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
+            printfn "test CAP: %s" testcap
+            self.currentCap(testcap)(self.ControlCapGetCurrent)
+
+        member self.set(cap:Cap): Result<string,string> =
+            let cp,co,ty,vs = cap
+            
+            let testcap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
+
+            printfn "test CAP: %s" testcap
+
+            let (|Test|_|) (s:string) =
+              if String.Compare(s, testcap, StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
+            
+            let (getcurrent,set__) =
+              match cp with
+              | TwCap.PixelType |  TwCap.XrefMech -> (self.ImageCapGetCurrent, self.ControlCapSet)
+              | _               -> (self.ControlCapGetCurrent, self.ImageCapSet)
+
+            let set_(cap: string): Result<string,string> =
+              try
+                match cap with 
+                | Test _ -> Ok "already set"
+                | _      -> Ok (set__(cap))
+              with e -> 
+                let code = try e.Message |> int |> Some with _ -> None
+                match code with 
+                | Some(TwCC s) -> Error s
+                | _            -> Error e.Message
+
+            self.currentCap(testcap)(getcurrent)
+              |> Result.bind set_
+
 
