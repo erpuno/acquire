@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="src/scan.fs" />
     <Compile Include="src/error.fs" />
+    <Compile Include="src/twain.fs" />
     <Compile Include="src/parse.fs" />
     <Compile Include="src/acquire.fs" />
   </ItemGroup>

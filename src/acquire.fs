@@ -6,6 +6,7 @@ open System.Threading
 open System.Text
 open Scan
 open Result
+open Twain
 
 module Acquire =
     let rec traverseR f list = 
@@ -27,72 +28,6 @@ module Acquire =
         let mutable tw: ITwain = tw
         let mutable reader: BinaryReader option = None
 
-        let init (): Result<int,string> = try tw.Init(); Ok 0 with e -> Error e.Message
-
-        let manager(_:int): Result<int,string> =
-            try
-                match tw.OpenDSM() with
-                | 0 -> Ok 0
-                | TwCC s -> Error s
-            with
-                | e -> Error e.Message
-
-        let ds(_:int): Result<string list,string> =
-            try 
-              match tw.GetDataSources() with
-                | [] -> Error "На цій ситемі відсутні TWAIN драйвери."
-                | xs -> Ok xs
-            with 
-              | e -> Error e.Message
-
-        let id(_: string list): Result<string,string> =
-            try
-              match tw.DefaultIdentity() with
-              | "" -> Error "Пристрій за замовчуванням відсутній."
-              | id -> Ok id
-            with
-              | e -> Error e.Message
-
-        let scanner(s: string): Result<string,string> =
-            try
-              match tw.OpenScanner(s) with
-              | "" -> Error "Неможливо відкрити сканер."
-              | r1 -> Ok r1
-            with
-              | e -> Error e.Message
-
-        let nativeTransfer(_:_): Result<int,string> =
-            try
-              match tw.NativeTransfer() with
-              | false -> Ok 0
-              | true -> Error "Помилка налаштування (native transfer)."
-            with
-              | e -> Error e.Message
-
-        let autoFeed(_): Result<int,string> = 
-            try
-              match tw.AutoFeed() with
-              | false -> Ok 0
-              | true -> Error "Помилка налаштування (auto feed)."
-            with
-              | e -> Error e.Message
-
-        let disableProgressUi(_): Result<int, string> =
-            try
-              match tw.ProgressDriverUi(false) with
-              | false -> Ok 0
-              | true -> Error "Помилка налаштування (progress ui)."
-            with
-              | e -> Error e.Message
-
-        let enableDs(_): Result<int,string> =
-            try
-              match tw.EnableDS() with
-              | 0 -> Ok 0
-              | _ -> Error "Неможливо почати сканування (enable DS without ui)."
-            with
-              | e -> Error e.Message
-        
         let currentCap(cap:string)(current:string -> string): Result<string,string> =
             try Ok (current(cap))
             with e ->
@@ -171,29 +106,19 @@ module Acquire =
                   tw.NativeCallback(false)
                   scanloop b
 
-            let start(_): Result<int,string> =
-                try
-                    match tw.Start(4) with
-                    | 0 ->
-                        tw.ScanCallback <- new Callback(scanloop)
-                        Ok 0
-                    | _ -> Error "Помилка налашування фінального стану так колбеку сканування."
-                with
-                | e -> Error e.Message
-
             match msg with
             | Scan(device,profile,caps) ->
                 let res =
-                    init()
-                    |> Result.bind manager
-                    |> Result.bind ds  // use profile here
-                    |> Result.bind id  // use device from command, not the default one
-                    |> Result.bind scanner
-                    |> Result.bind nativeTransfer
-                    |> Result.bind autoFeed
-                    |> Result.bind disableProgressUi
-                    |> Result.bind enableDs
-                    |> Result.bind start
+                    tw.init()
+                    |> Result.bind tw.manager
+                    |> Result.bind tw.ds  // use profile here
+                    |> Result.bind tw.id  // use device from command, not the default one
+                    |> Result.bind tw.scanner
+                    |> Result.bind tw.nativeTransfer
+                    |> Result.bind tw.autoFeed
+                    |> Result.bind tw.disableProgressUi
+                    |> Result.bind tw.enableDs
+                    |> Result.bind (fun e -> tw.start(scanloop))
                     |> Result.mapError (fun e -> tw.Exit <- true; tw.CloseDSM() |> ignore; e)
 
                 match res with
@@ -202,11 +127,11 @@ module Acquire =
 
             | Get(device,profile,caps) ->
               let res =
-                init()
-                  |> Result.bind manager
-                  |> Result.bind ds
-                  |> Result.bind id
-                  |> Result.bind scanner
+                tw.init()
+                  |> Result.bind tw.manager
+                  |> Result.bind tw.ds
+                  |> Result.bind tw.id
+                  |> Result.bind tw.scanner
                   |> Result.bind (fun (_:string) -> traverseR get (Seq.toList caps))
 
               match res with
@@ -215,11 +140,11 @@ module Acquire =
             
             | Set (device,profile,caps) ->
               let res = 
-                init()
-                  |> Result.bind manager
-                  |> Result.bind ds  // use profile here
-                  |> Result.bind id  // use device from command, not the default one
-                  |> Result.bind scanner
+                tw.init()
+                  |> Result.bind tw.manager
+                  |> Result.bind tw.ds  // use profile here
+                  |> Result.bind tw.id  // use device from command, not the default one
+                  |> Result.bind tw.scanner
                   |> Result.bind (fun (_:string) -> traverseR set (Seq.toList caps))
 
               // form profile message
