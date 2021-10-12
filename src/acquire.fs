@@ -67,7 +67,7 @@ module Acquire =
             | Scan(device,profile,caps) ->
                 let res =
                     tw.init()
-                    |> Result.bind tw.manager
+                    |> Result.bind tw.openDSM
                     |> Result.bind tw.ds  // use profile here
                     |> Result.bind tw.id  // use device from command, not the default one
                     |> Result.bind tw.scanner
@@ -85,11 +85,13 @@ module Acquire =
             | Get(device,profile,caps) ->
               let res =
                 tw.init()
-                  |> Result.bind tw.manager
+                  |> Result.bind tw.openDSM
                   |> Result.bind tw.ds
                   |> Result.bind tw.id
                   |> Result.bind tw.scanner
                   |> Result.bind (fun (_:string) -> traverseR tw.get (Seq.toList caps))
+                  |> Result.bind tw.closeDSM
+                  |> Result.mapError (fun e -> tw.Exit<-true; tw.CloseDSM() |> ignore; e)
 
               match res with
               | Ok sts -> ch.Reply (Out(Encoding.UTF8.GetBytes($"{sts}")))
@@ -98,11 +100,13 @@ module Acquire =
             | Set (device,profile,caps) ->
               let res = 
                 tw.init()
-                  |> Result.bind tw.manager
+                  |> Result.bind tw.openDSM
                   |> Result.bind tw.ds  // use profile here
                   |> Result.bind tw.id  // use device from command, not the default one
                   |> Result.bind tw.scanner
                   |> Result.bind (fun _ -> traverseR tw.set (Seq.toList caps))
+                  |> Result.bind tw.closeDSM
+                  |> Result.mapError (fun e -> tw.Exit<-true; tw.CloseDSM() |> ignore; e)
 
               // form profile message
               match res with

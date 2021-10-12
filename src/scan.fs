@@ -81,8 +81,18 @@ module Scan =
       abstract member State: int with get
 
     type TwCC = (*condition code*)
-      | Baddest = 0x1000c
+      | Error = 0x10000
+      | OperationError = 0x10005
+      | BadCap = 0x10006
+      | BadProtocol = 0x10009
+      | BadValue = 0x1000a
+      | BadDest = 0x1000c
       | UnsupportedCap = 0x1000d
+      | BadOperationCap = 0x1000e
+      | SeqError = 0x1000b
+      | SeqErrorCap = 0x1000f
+      // replace folowing with real TWCC_ in .h file or spec
+      | NoDrivers = 1
 
     module TwCap = 
       let MkString = function

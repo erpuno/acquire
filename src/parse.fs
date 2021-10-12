@@ -19,7 +19,9 @@ module Parser =
                 match s with
                 | Eq "autofeed"   _ -> (TwCap.AutoFeed,TwON.Value,TwType.bool,"true")
                 | Eq "autoscan"   _ -> (TwCap.AutoScan,TwON.Value,TwType.bool,"true")
-                | Eq "duplex"     _ -> (TwCap.Duplex,TwON.Value,TwType.bool,"true")
+                | Eq "duplex"     _ -> (TwCap.Duplex,TwON.Value,TwType.bool,"true") 
+                  // this is actually enumeration from spec 2.0. probably doesn't also work in scanner
+                  // its also not duplex cap, its if its should be enabled cap
                 | Eq "indicators" _ -> (TwCap.Indicators,TwON.Value,TwType.bool,"true")
                 | Eq "native"     _ -> (TwCap.XrefMech,TwON.Value,TwType.uint16,"TWSX_NATIVE") // use types
                 | Eq "color-bw"   _ -> (TwCap.PixelType,TwON.Value,TwType.uint16,"TWPT_BW")    // enum support

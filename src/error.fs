@@ -6,5 +6,7 @@ module Err =
     let (|TwCC|) (code:int) =
       match enum<TwCC>(code) with
       | TwCC.UnsupportedCap -> "Задані можливості не підтримуються джерелом даних."
-      | TwCC.Baddest        -> "Невідомий пристрій в DSM менеджері джерел даних."
-      | c                   -> $"Неможливо відкрити джерело даних. {c}"
+      | TwCC.BadDest        -> "Невідомий пристрій в DSM менеджері джерел даних."
+      | TwCC.Error          -> "some generic error on the border of custom spce"
+      | TwCC.SeqError       -> "Illegal operation for current Source Manager or Source state."
+      | c                   -> $"Поомилка {c}."
