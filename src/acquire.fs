@@ -102,7 +102,7 @@ module Acquire =
                   |> Result.bind tw.ds  // use profile here
                   |> Result.bind tw.id  // use device from command, not the default one
                   |> Result.bind tw.scanner
-                  |> Result.bind (fun (_:string) -> traverseR tw.set (Seq.toList caps))
+                  |> Result.bind (fun _ -> traverseR tw.set (Seq.toList caps))
 
               // form profile message
               match res with

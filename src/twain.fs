@@ -16,6 +16,8 @@ module Twain =
                             | e -> Error e.Message
             f' <!> Ok a
 
+    let errCode code = try code |> int |> (function | TwCC s -> Some s) with _ -> None
+
     type ITwain with
         member self.init():             Result<int,string> =
             Result.lift self.Init () (function |_ -> None) |> Result.map (fun _ -> 0)            
@@ -49,23 +51,13 @@ module Twain =
             Result.lift self.Start 4 (function | 0 -> None;|_->Some "Помилка налашування фінального стану так колбеку сканування.") 
                 |> Result.map (fun x -> self.ScanCallback <- new Callback(scanloop); x)
 
-        member self.currentCap(cap:string)(current:string -> string): Result<string,string> =
-            try Ok (current(cap))
-            with e ->
-              let code = try e.Message |> int |> Some with _ -> None
-              match code with 
-              | Some(TwCC s) -> Error s
-              | _            -> Error e.Message
-
         member self.get(cap:Cap): Result<string,string> =
             let cp,co,ty,vs = cap
-            let testcap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
-            printfn "test CAP: %s" testcap
-            self.currentCap(testcap)(self.ControlCapGetCurrent)
+            let scap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
+            Result.lift self.ControlCapGetCurrent scap errCode
 
         member self.set(cap:Cap): Result<string,string> =
             let cp,co,ty,vs = cap
-            
             let testcap = sprintf "%s,%s,%s,%s" (TwCap.MkString(cp)) (TwON.MkString(co)) (TwType.MkString(ty)) (vs.ToUpperInvariant())
 
             printfn "test CAP: %s" testcap
@@ -78,18 +70,8 @@ module Twain =
               | TwCap.PixelType |  TwCap.XrefMech -> (self.ImageCapGetCurrent, self.ControlCapSet)
               | _               -> (self.ControlCapGetCurrent, self.ImageCapSet)
 
-            let set_(cap: string): Result<string,string> =
-              try
-                match cap with 
-                | Test _ -> Ok "already set"
-                | _      -> Ok (set__(cap))
-              with e -> 
-                let code = try e.Message |> int |> Some with _ -> None
-                match code with 
-                | Some(TwCC s) -> Error s
-                | _            -> Error e.Message
+            let set_ cap = Result.lift set__ cap errCode
 
-            self.currentCap(testcap)(getcurrent)
-              |> Result.bind set_
-
-
+            Result.lift getcurrent testcap errCode
+                |> Result.bind (function | Test _ -> Error "already set";| cap -> Ok cap)
+                |> Result.bind set_
