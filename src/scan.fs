@@ -27,7 +27,6 @@ module Scan =
       abstract GetDataSources: unit -> string list
       abstract DefaultIdentity: unit -> string
       abstract OpenScanner: string -> string
-      abstract NativeTransfer: unit -> bool
       abstract NativeCallback: bool -> unit
       abstract AutoFeed: unit -> bool
       abstract AutoScan: unit -> bool

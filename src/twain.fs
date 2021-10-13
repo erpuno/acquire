@@ -29,8 +29,9 @@ module Twain =
         member self.scanner(s: string): Result<string,string> =
             Result.lift self.OpenScanner s (function | "" -> Some "Неможливо відкрити сканер.";|_-> None)
 
-        member self.nativeTransfer(_:_): Result<int,string> =
-            Result.lift self.NativeTransfer () (function | true -> Some "Помилка налаштування (native transfer).";|_-> None) |> Result.map (fun _ -> 0)
+        member self.nativeTransfer(_): Result<string,string> =
+            let cap = (TwCap.XrefMech,TwON.Value,TwType.uint16,"TWSX_NATIVE")            
+            Result.lift2 self.Cap TwMsg.Set (scap cap) errCode //Помилка налаштування (native transfer)
 
         member self.autoFeed(_): Result<int,string> =
             Result.lift self.AutoFeed () (function | true -> Some "Помилка налаштування (auto feed).";|_ -> None) |> Result.map (fun _ -> 0)

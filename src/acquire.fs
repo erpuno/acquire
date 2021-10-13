@@ -65,6 +65,7 @@ module Acquire =
 
             match msg with
             | Scan(device,profile,caps) ->
+                // use default caps here (native, autofeed)
                 let res =
                     tw.init()
                     |> Result.bind tw.openDSM
@@ -77,6 +78,8 @@ module Acquire =
                     |> Result.bind tw.enableDs
                     |> Result.bind (fun e -> tw.start(scanloop))
                     |> Result.mapError (fun e -> tw.Exit <- true; tw.CloseDSM() |> ignore; e)
+
+                // close dsm ? ->? , opendsm 1->2, unloaddsm - 2->1
 
                 match res with
                 | Ok sts  -> sts |> ignore
