@@ -1,16 +1,28 @@
 namespace N2O
 open System
+open Types
 
 module Scan =
     type TwCap =
       | Profile     = 0
+      | CustomData  = 0x1015  // check if source suppports new opeation triplets DG_CONTROL/MSG_CUSTOMDATA/MSG_ TW_ONEVALUE TW_BOOL
+                              // valid is state 4
+                              // DG_CONTROL/DAT_CUSTOMDSDATA/MSG_GET 
+                              // query datasource for its current settings (DPI, paper size, color format)
+                              // TW_CUSTOMDATA structure
+                              // actual format of this structure not defined by twain
+                              // 
       | AutoFeed    = 0x1007
       | AutoScan    = 0x1010
       | Duplex      = 0x1013
       | Indicators  = 0x100b
       | XrefMech    = 0x0103
-      | PixelType   = 0x0101 // can be set on onevalue or enumeration. any xrefmech other that native and can't support every value, must support negotiation on this cap
-
+      | PixelType   = 0x0101  // can be set on onevalue or enumeration. 
+                              // any xrefmech other that native and can't support every value, must support negotiation on this cap
+                              // ICAP!
+      | CameraEnabled = 0x1036  // implicitely set to true by setting pixeltype.
+      | CameraOrder = 0x1037  // select the order or output for SDMI
+                              // 
     type TwON =
       | Array = 3
       | Enum  = 4
@@ -70,12 +82,7 @@ module Scan =
       abstract FileInfo: unit -> string
       abstract Start: int -> int
       abstract Rollback: int -> unit
-      abstract ControlCapGetCurrent: string -> string
-      abstract ControlCapGet: string -> string
-      abstract ControlCapSet: string -> string
-      abstract ControlCapReset: unit -> string
-      abstract ImageCapGetCurrent: string -> string
-      abstract ImageCapSet: string -> string
+      abstract Cap: TwMsg -> string -> string
       abstract member Exit: bool with  get,set
       abstract member ScanCallback: Callback with get,set
       abstract member State: int with get

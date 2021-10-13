@@ -89,7 +89,7 @@ module Acquire =
                   |> Result.bind tw.ds
                   |> Result.bind tw.id
                   |> Result.bind tw.scanner
-                  |> Result.bind (fun (_:string) -> traverseR tw.get (Seq.toList caps))
+                  |> Result.bind (fun (_:string) -> traverseR tw.getCurrent (Seq.toList caps))
                   |> Result.bind tw.closeDSM
                   |> Result.mapError (fun e -> tw.Exit<-true; tw.CloseDSM() |> ignore; e)
 

@@ -16,6 +16,24 @@ module Twain =
                             | e -> Error e.Message
             f' <!> Ok a
 
+        let apply fr xr =
+                match fr, xr with
+                | Ok f, Ok x -> Ok (f x)
+                | Error e, _ -> Error e
+                | _, Error e -> Error e        
+
+        let lift2 (f: 'a -> 'b -> 'c) (a:'a) (b:'b) (err: 'c -> string option): Result<'c, string> =
+            let (<*>) = apply
+            let (|Err|_|) b = err b 
+            try 
+                match Ok f <*> Ok a <*> Ok b with
+                | Ok (Err s) -> Error s
+                | Ok v -> Ok v
+                | Error e -> Error e
+            with
+            | e -> Error e.Message
+            
+
     let errCode code = try code |> int |> (function | TwCC s -> Some s) with _ -> None
 
     let scap (cap:Cap) = 
@@ -51,7 +69,6 @@ module Twain =
             Result.lift self.ProgressDriverUi false (function | true -> Some "Помилка налаштування (progress ui)";|_-> None) |> Result.map(fun _ -> 0)
 
         member self.enableDs(_): Result<int,string> =
-            // lift for twcc codes, but we don't know codes yet
             Result.lift self.EnableDS () (function | 0 -> None;|_-> Some "Неможливо почати сканування (enable DS without ui).")
 
         member self.start(scanloop): Result<int,string> =
@@ -59,23 +76,20 @@ module Twain =
                 |> Result.map (fun x -> self.ScanCallback <- new Callback(scanloop); x)
 
         member self.get(cap:Cap): Result<string,string> =
-            Result.lift self.ControlCapGet (scap cap) errCode
+            Result.lift2 self.Cap TwMsg.Get (scap cap) errCode
+        
+        member self.getCurrent(cap:Cap): Result<string,string> = 
+            Result.lift2 self.Cap TwMsg.GetCurrent (scap cap) errCode
+
+        member self.getDefault(cap:Cap): Result<string,string> = 
+            Result.lift2 self.Cap TwMsg.GetDefault (scap cap) errCode
 
         member self.set(cap:Cap): Result<string,string> =
-            let cp,_,_,_ = cap
-            let testcap = scap cap
-            printfn "test CAP: %s" testcap
-
-            let (|Test|_|) (s:string) =
+            let (|Eq|_|) (s:string) =
               if String.Compare(s, (scap cap), StringComparison.InvariantCultureIgnoreCase) = 0 then Some() else None
-            
-            let (getcurrent,set__) =
-              match cp with
-              | TwCap.PixelType |  TwCap.XrefMech -> (self.ImageCapGetCurrent, self.ControlCapSet)
-              | _               -> (self.ControlCapGetCurrent, self.ImageCapSet)
 
-            let set_ cap = Result.lift set__ cap errCode
+            let set_ cap = Result.lift2 self.Cap TwMsg.Set cap errCode
 
-            Result.lift getcurrent (scap cap) errCode
-                |> Result.bind (function | Test _ -> Error "already set";| cap -> Ok cap)
+            Result.lift2 self.Cap TwMsg.GetCurrent (scap cap) errCode
+                |> Result.bind (function | Eq _ -> Error "already set";| cap -> Ok cap)
                 |> Result.bind set_

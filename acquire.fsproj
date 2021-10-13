@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="src/twainh.fs"/>
     <Compile Include="src/scan.fs" />
     <Compile Include="src/error.fs" />
     <Compile Include="src/twain.fs" />
