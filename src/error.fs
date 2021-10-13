@@ -12,3 +12,5 @@ module Err =
       | TwCC.SeqError       -> "Illegal operation for current Source Manager or Source state."
       | TwCC.SeqErrorCap    -> "Capability cannot be modified due to a setting for a related capability."
       | c                   -> $"Поомилка {c}."
+
+    let errCode (code:string) = try code |> int |> (function | TwCC s -> Some s) with _ -> None
